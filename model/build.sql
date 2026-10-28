@@ -4,6 +4,7 @@ BEGIN;
 SELECT pg_advisory_xact_lock(74192318);
 CREATE SCHEMA IF NOT EXISTS core;
 \ir tables.sql
+\ir audit.sql
 TRUNCATE core.fct_review_order, core.fct_review, core.fct_payment,
  core.fct_order_item, core.fct_order_seller, core.fct_order,
  core.dim_customer, core.dim_product, core.dim_category, core.dim_seller,
@@ -20,6 +21,10 @@ ANALYZE core.fct_order_seller;
 ANALYZE core.fct_review;
 ANALYZE core.fct_review_order;
 \ir checks.sql
+INSERT INTO audit.active_dataset(singleton,version_id)
+ SELECT true,version_id FROM _version
+ ON CONFLICT(singleton) DO UPDATE SET version_id=excluded.version_id;
+\ir audit_views.sql
 COMMIT;
 SELECT 'orders' AS entity, count(*) FROM core.fct_order
 UNION ALL SELECT 'customers', count(*) FROM core.dim_customer

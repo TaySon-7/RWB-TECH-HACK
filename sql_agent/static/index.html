@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Capibara · Аналитик</title><link rel="stylesheet" href="static/agent.css">
+</head>
+<body>
+  <main>
+    <header><div class="brand"><span class="mark">C</span><div><strong>Capibara <span>Аналитик</span></strong><small>Вопрос → SQL → проверяемые данные</small></div></div>
+      <div class="header-right"><span id="backend" class="badge">Подключаюсь</span><button id="reset" class="quiet" title="Начать новый диалог">Новый диалог ↗</button></div></header>
+    <section class="toolbar"><label><input id="use-period" type="checkbox" checked> Период дашборда: <b id="period"></b></label><a id="dashboard" href="/d/capibara-commerce" target="_blank" rel="noopener">Открыть графики ↗</a></section>
+    <div id="chat" role="log" aria-live="polite">
+      <section id="intro"><p class="eyebrow">СПРОСИТЕ О ВАШЕМ МАРКЕТПЛЕЙСЕ</p><h1>От вопроса до цифры.<br><span>С возможностью перепроверить.</span></h1>
+        <p>Агент изучает схему, выполняет запрос и проверяет качество исходных данных. Если смысла не хватает — уточняет.</p>
+        <div class="suggestions"><button data-question="Какова общая выручка от товаров за выбранный период?">Общая выручка <span>↗</span></button><button data-question="Покажи выручку и число доставленных заказов по месяцам, включая месяцы без продаж.">Продажи по месяцам <span>↗</span></button><button data-question="Покажи десять продавцов с наибольшей выручкой, их город, штат и число заказов.">Топ продавцов <span>↗</span></button></div>
+      </section>
+    </div>
+    <form id="composer"><div id="activity" aria-live="polite"></div><div class="input-row"><textarea id="question" rows="1" placeholder="Например: кто из продавцов принёс больше всего выручки?" aria-label="Вопрос агенту" required maxlength="10000"></textarea><button id="send" type="submit">Спросить <span>↑</span></button></div><p id="hint">Enter — отправить · Shift + Enter — новая строка · Только чтение данных</p></form>
+  </main>
+  <script src="static/agent.js" defer></script>
+</body></html>

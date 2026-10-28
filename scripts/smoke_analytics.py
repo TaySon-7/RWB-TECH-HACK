@@ -52,7 +52,7 @@ health = grafana('/api/datasources/uid/capibara-clickhouse/health')
 assert health['status'] == 'OK', health
 dashboard = grafana('/api/dashboards/uid/capibara-commerce')['dashboard']
 for panel in dashboard['panels']:
-    if 'targets' not in panel:
+    if not panel.get('targets'):
         continue
     body = {'from': '1472688000000', 'to': '1535759999999', 'queries': []}
     for target in panel['targets']:

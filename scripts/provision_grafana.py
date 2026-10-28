@@ -1,4 +1,4 @@
-"""Create a separate jury viewer once; preserve credentials on later deploys."""
+"""Set the saved home dashboard and create a separate jury viewer once."""
 import base64
 import json
 from pathlib import Path
@@ -12,12 +12,31 @@ auth = base64.b64encode(f"admin:{settings['GRAFANA_ADMIN_PASSWORD']}".encode()).
 base = 'http://127.0.0.1:' + settings.get('GRAFANA_PORT', '3000')
 
 
-def request(path, body=None):
+def request(path, body=None, method=None):
     req = Request(base + path, data=json.dumps(body).encode() if body is not None else None,
-                  headers={'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json'})
+                  headers={'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json'},
+                  method=method)
     with urlopen(req, timeout=30) as response:
         return json.load(response)
 
+
+# Seed once. Subsequent deploys must preserve panels and SQL saved in the UI.
+template = json.loads((ROOT / 'grafana/dashboards/commerce.json').read_text())
+try:
+    request('/api/dashboards/uid/' + template['uid'])
+except HTTPError as error:
+    if error.code != 404:
+        raise
+    folder = next((item for item in request('/api/folders?limit=1000')
+                   if item['title'] == 'Capibara'), None)
+    if folder is None:
+        folder = request('/api/folders', {'uid': 'capibara', 'title': 'Capibara'})
+    request('/api/dashboards/db', {'dashboard': template, 'folderUid': folder['uid'],
+                                 'overwrite': False, 'message': 'Initial Capibara dashboard'})
+
+# Open the saved dashboard from Grafana's database, not a fresh JSON home-page copy.
+# PATCH preserves the organization's other display preferences.
+request('/api/org/preferences', {'homeDashboardUID': template['uid']}, method='PATCH')
 
 try:
     viewer = request('/api/users/lookup?loginOrEmail=jury')

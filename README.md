@@ -125,3 +125,16 @@ python3 scripts/smoke_analytics.py
 Grafana: http://localhost:3000/d/capibara-commerce. Пароль администратора
 создаётся в `.env.analytics`. Архитектура, CI/CD, проверки и сценарий
 демонстрации — [docs/analytics-architecture.md](docs/analytics-architecture.md).
+
+Под `admin` текущий дашборд можно менять: **Edit → Save dashboard → Save**.
+Сохранённые правки остаются после обновления страницы и перезапуска контейнера
+в Docker volume `grafana_data`. Главная страница открывает этот же дашборд.
+`grafana/dashboards/commerce.json` служит стартовым шаблоном: повторный запуск
+стенда не заменяет уже сохранённые панели и SQL. Чтобы перенести правки
+из интерфейса в репозиторий, экспортируйте JSON дашборда.
+
+В дашборд встроен диалоговый SQL-агент. Его можно открыть отдельно:
+http://localhost:3000/agent/. Заполните `LLM_MODEL`, `LLM_BASE_URL` и
+`LLM_API_KEY` в локальном `.env.agent` (шаблон: `sql_agent/.env.example`).
+Остальные настройки БД уже заданы. После изменения файла пересоздайте сервис
+`agent`; команды, цикл инструментов и ограничения аудита — [sql_agent/README.md](sql_agent/README.md).

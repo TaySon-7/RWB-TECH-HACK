@@ -118,10 +118,13 @@ def check_header(path, expected):
         )
 
 
-def load_file(cur, path, table, columns):
+def load_file(cur, path, table, columns, *, append=False):
     check_header(path, columns)
 
-    cur.execute(f"TRUNCATE {table}")
+    if not append:
+        cur.execute(f"TRUNCATE {table}")
+    cur.execute(f"SELECT count(*) FROM {table}")
+    before = cur.fetchone()[0]
 
     # Читаем в utf-8-sig: у одного из файлов в начале стоит BOM,
     # без этого первая колонка приедет с невидимым мусором в имени.
@@ -134,9 +137,23 @@ def load_file(cur, path, table, columns):
         buf,
     )
 
-    cur.execute(f"UPDATE {table} SET _source_file = %s", (path.name,))
+    cur.execute(f"UPDATE {table} SET _source_file = %s WHERE _source_file IS NULL",
+                (str(path.relative_to(DATA_DIR)),))
     cur.execute(f"SELECT count(*) FROM {table}")
-    return cur.fetchone()[0]
+    return cur.fetchone()[0] - before
+
+
+def source_files():
+    """Full snapshot: supplied files plus registered-format CSV batches."""
+    files = [(DATA_DIR / name, table, columns, False) for name, table, columns in MAPPING]
+    for path in sorted((DATA_DIR / 'extra').rglob('*.csv')):
+        with path.open(encoding='utf-8-sig', newline='') as handle:
+            columns = next(csv.reader(handle))
+        matches = [(table, expected) for _, table, expected in MAPPING if set(columns) == set(expected)]
+        if len(matches) != 1:
+            raise SystemExit(f'Неизвестный контракт {path}: сначала зарегистрируйте поля в MAPPING.')
+        files.append((path, matches[0][0], columns, True))
+    return files
 
 
 def run_sql_file(cur, path):
@@ -196,10 +213,10 @@ def main():
 
         print()
         total = 0
-        for name, table, columns in MAPPING:
-            n = load_file(cur, DATA_DIR / name, table, columns)
+        for path, table, columns, append in source_files():
+            n = load_file(cur, path, table, columns, append=append)
             total += n
-            print(f"  {table:<38} {n:>8,} строк")
+            print(f"  {table:<38} {n:>8,} строк · {path.relative_to(DATA_DIR)}")
 
         print(f"\n  итого {total:,} строк за {time.time() - started:.1f} с")
 

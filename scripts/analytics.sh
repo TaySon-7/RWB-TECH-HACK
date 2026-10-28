@@ -12,7 +12,7 @@ case "${1:-up}" in
     "${DC[@]}" build pipeline
     "${DC[@]}" run --rm --no-deps pipeline bootstrap
     "${DC[@]}" run --rm --no-deps pipeline ingest
-    "${DC[@]}" up -d --wait grafana
+    "${DC[@]}" up -d --build --wait grafana agent gateway
     python3 scripts/provision_grafana.py
     "${DC[@]}" ps
     ;;

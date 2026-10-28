@@ -21,6 +21,7 @@ from google.protobuf.json_format import MessageToDict
 
 import marketplace_pb2 as wire
 from schema import TABLES
+from quality import snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 EPOCH = datetime(1970, 1, 1)
@@ -51,9 +52,9 @@ def apply_sql(filename):
 
 def convert(value, kind):
     if kind in ('str', 'id'):
-        if kind == 'id' and (len(value) != 32 or any(c not in '0123456789abcdef' for c in value)):
+        if kind == 'id' and not value.strip():
             raise ValueError(f'Invalid identifier: {value!r}')
-        return value
+        return value.strip() if kind == 'id' else value
     if kind == 'money':
         cents = Decimal(value) * 100
         if cents != cents.to_integral_value() or cents < 0:
@@ -72,21 +73,19 @@ def convert(value, kind):
 def event_for(row, table, version):
     _, message, filename, keys, fields = table
     values = {name: convert(row[source], kind) for source, name, kind in fields}
+    for name in keys:
+        if isinstance(values[name], int) and values[name] <= 0:
+            raise ValueError(f'Invalid key {name}')
+    if table[0] == 'orders' and not values.get('order_purchase_timestamp_ms'):
+        raise ValueError('Missing purchase timestamp')
     event = getattr(wire, message)(**values, source_version=version, source_file=filename)
     key = ':'.join(str(values[name]) for name in keys).encode()
     return key, event
 
 
 def dataset_info():
-    digest = hashlib.sha256()
-    expected = {}
-    for name, _, filename, _, _ in TABLES:
-        source = ROOT / 'data' / filename
-        digest.update(filename.encode())
-        digest.update(hashlib.sha256(source.read_bytes()).digest())
-        with source.open(encoding='utf-8-sig', newline='') as handle:
-            expected[name] = sum(1 for _ in csv.DictReader(handle))
-    return digest.hexdigest(), expected
+    prepared = snapshot(ROOT, event_for)
+    return prepared['hash'], prepared['expected']
 
 
 def bootstrap():
@@ -109,6 +108,16 @@ def bootstrap():
     query(f"CREATE USER IF NOT EXISTS grafana_reader IDENTIFIED WITH sha256_password BY '{password}'")
     query('ALTER USER grafana_reader SETTINGS readonly = 1, max_execution_time = 30 MIN 1 MAX 300 CHANGEABLE_IN_READONLY')
     query('GRANT SELECT ON mart.* TO grafana_reader')
+    query('GRANT SELECT ON core.* TO grafana_reader')
+    from audit import bootstrap_audit
+    bootstrap_audit(query)
+    agent_password = os.environ.get('CLICKHOUSE_AGENT_PASSWORD', password)
+    if not agent_password.isalnum():
+        raise ValueError('CLICKHOUSE_AGENT_PASSWORD must be alphanumeric')
+    query(f"CREATE USER IF NOT EXISTS agent_reader IDENTIFIED WITH sha256_password BY '{agent_password}'")
+    query('ALTER USER agent_reader SETTINGS readonly=1, max_threads=4, max_memory_usage=800000000, max_execution_time=30 MIN 1 MAX 60 CHANGEABLE_IN_READONLY')
+    for database in ['core','mart','ops']:
+        query(f'GRANT SELECT ON {database}.* TO agent_reader')
     print('Kafka topics, Protobuf consumers, core and read-only Grafana user ready.', flush=True)
 
 
@@ -187,18 +196,20 @@ def publish():
 
 def ingest(force=False):
     started = time.monotonic()
-    fingerprint, expected = dataset_info()
-    already_loaded = int(query(f"SELECT count() FROM ops.load_runs WHERE dataset_hash='{fingerprint}'")) > 0
+    prepared = snapshot(ROOT, event_for)
+    fingerprint, expected = prepared['hash'], prepared['expected']
+    latest = query('SELECT dataset_hash,toString(source_version) FROM ops.load_runs ORDER BY source_version DESC LIMIT 1').split('\t')
+    state = query('SELECT toString(max(source_version)),argMax(status,changed_at) FROM ops.load_state').split('\t')
+    already_loaded = (len(latest) == 2 and latest[0] == fingerprint and state == [latest[1], 'completed'])
     if already_loaded and counts() == expected and not force:
         print('Source snapshot unchanged; keeping Kafka offsets and existing data.', flush=True)
         validate(expected)
         publish()
         return
-    # This command imports a complete immutable snapshot. Do not silently retain
-    # rows deleted from a later snapshot; a changed source needs a versioned dataset.
-    if not already_loaded and int(query('SELECT count() FROM ops.load_runs')):
-        raise RuntimeError('New source snapshot detected. Use a new dataset namespace; in-place snapshot replacement is intentionally disabled.')
     version = time.time_ns()
+    from audit import begin_load, save_rejections, finish_load
+    begin_load(query, version)
+    save_rejections(query, prepared['rejections'], version)
     producer = Producer({
         'bootstrap.servers': os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092'),
         'enable.idempotence': True, 'acks': 'all', 'compression.type': 'lz4',
@@ -211,13 +222,16 @@ def ingest(force=False):
         if error:
             failures.append(str(error))
 
-    for table in TABLES:
-        name, _, filename, _, _ = table
-        with (ROOT / 'data' / filename).open(encoding='utf-8-sig', newline='') as handle:
-            for row in csv.DictReader(handle):
+    for table, path in prepared['files']:
+        name = table[0]
+        relative = str(path.relative_to(ROOT / 'data'))
+        with path.open(encoding='utf-8-sig', newline='') as handle:
+            for number, row in enumerate(csv.DictReader(handle), 1):
+                if (relative, number) in prepared['bad_locators']:
+                    continue
                 key, event = event_for(row, table, version)
+                event.source_file = relative
                 payload = event.SerializeToString()
-                # Measure equivalent typed JSON, not the CSV's verbose original.
                 json_size = len(json.dumps(MessageToDict(event, preserving_proto_field_name=True),
                                            ensure_ascii=False, separators=(',', ':')).encode())
                 while True:
@@ -231,11 +245,10 @@ def ingest(force=False):
                 total_json += json_size
                 if total_rows % 10000 == 0:
                     producer.poll(0)
-        print(f'Queued {name}: {expected[name]:,} Protobuf events', flush=True)
+        print(f'Queued {relative}', flush=True)
     remaining = producer.flush(180)
     if remaining or failures:
         raise RuntimeError(f'Kafka delivery failed: pending={remaining}, errors={failures[:3]}')
-    wait_for_ingestion(expected)
     # For replay, count equality is insufficient: wait for all latest versions.
     deadline = time.monotonic() + 180
     while any(int(query(f'SELECT count() FROM raw.{name} FINAL WHERE source_version={version}')) != count
@@ -243,10 +256,14 @@ def ingest(force=False):
         if time.monotonic() > deadline:
             raise RuntimeError('Not all current-version events were consumed')
         time.sleep(2)
+    # All current rows arrived: remove superseded snapshot rows, including deletions.
+    for name, *_ in TABLES:
+        query(f'ALTER TABLE raw.{name} DELETE WHERE source_version < {version} SETTINGS mutations_sync=1')
     validate(expected)
     publish()
     elapsed = time.monotonic() - started
     query(f"INSERT INTO ops.load_runs (dataset_hash,source_version,rows,protobuf_bytes,json_bytes,elapsed_seconds) VALUES ('{fingerprint}',{version},{total_rows},{total_wire},{total_json},{elapsed})")
+    finish_load(query, version, prepared)
     print(json.dumps({'rows': total_rows, 'protobuf_bytes': total_wire,
                       'equivalent_json_bytes': total_json,
                       'payload_reduction_percent': round(100*(1-total_wire/total_json), 1),
@@ -258,11 +275,19 @@ if __name__ == '__main__':
     parser.add_argument('command', choices=['bootstrap', 'ingest', 'check', 'publish'])
     parser.add_argument('--force', action='store_true', help='Replay the same source snapshot to verify deduplication')
     args = parser.parse_args()
-    if args.command == 'bootstrap':
-        bootstrap()
-    elif args.command == 'ingest':
-        ingest(args.force)
-    elif args.command == 'check':
-        validate(dataset_info()[1])
-    else:
-        publish()
+    try:
+        if args.command == 'bootstrap':
+            bootstrap()
+        elif args.command == 'ingest':
+            ingest(args.force)
+        elif args.command == 'check':
+            validate(dataset_info()[1])
+        else:
+            publish()
+    except Exception:
+        if args.command == 'ingest':
+            try:
+                query("INSERT INTO ops.load_state(source_version,status) SELECT max(source_version),'failed' FROM ops.load_state HAVING argMax(status,changed_at)='loading'")
+            except Exception:
+                pass
+        raise

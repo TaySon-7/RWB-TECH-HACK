@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS ops.load_runs (
  completed_at DateTime DEFAULT now()
 ) ENGINE = MergeTree ORDER BY (completed_at, dataset_hash);
 
-CREATE OR REPLACE VIEW core.dim_customer AS
+CREATE OR REPLACE VIEW core.dim_customer DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT customer_unique_id AS customer_key,
  min(fromUnixTimestamp64Milli(order_purchase_timestamp_ms, 'UTC')) AS first_order_at,
  count() AS orders_count
@@ -18,12 +18,12 @@ FROM raw.orders AS o FINAL
 INNER JOIN raw.customers AS c FINAL ON o.customer_id = c.customer_id
 GROUP BY customer_key;
 
-CREATE OR REPLACE VIEW core.dim_seller AS
+CREATE OR REPLACE VIEW core.dim_seller DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT seller_id, leftPad(seller_zip_code_prefix, 5, '0') AS zip,
  seller_city AS city_raw, lowerUTF8(trimBoth(replaceRegexpAll(seller_city, '\\s+', ' '))) AS city,
  seller_state AS state FROM raw.sellers FINAL;
 
-CREATE OR REPLACE VIEW core.dim_category AS
+CREATE OR REPLACE VIEW core.dim_category DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT concat('pt:', product_category_name) AS category_key,
  product_category_name AS name_pt, t.product_category_name_english AS name_en,
  t.product_category_name_english != '' AS is_translated, 0 AS is_unknown
@@ -35,7 +35,7 @@ FROM (
 LEFT JOIN raw.product_category_translation AS t FINAL USING (product_category_name)
 UNION ALL SELECT 'unknown', '', '', 0, 1;
 
-CREATE OR REPLACE VIEW core.dim_product AS
+CREATE OR REPLACE VIEW core.dim_product DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT product_id,
  if(product_category_name = '', 'unknown', concat('pt:', product_category_name)) AS category_key,
  nullIf(product_name_lenght, -1) AS name_length,
@@ -47,7 +47,7 @@ SELECT product_id,
  nullIf(product_width_cm, -1) AS width_cm
 FROM raw.products FINAL;
 
-CREATE OR REPLACE VIEW core.fct_order_item AS
+CREATE OR REPLACE VIEW core.fct_order_item DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT order_id, order_item_id, product_id, seller_id,
  fromUnixTimestamp64Milli(shipping_limit_date_ms, 'UTC') AS shipping_limit_at,
  toDecimal64(price_cents, 2) / 100 AS price,
@@ -55,13 +55,13 @@ SELECT order_id, order_item_id, product_id, seller_id,
  price_cents, freight_cents
 FROM raw.order_items FINAL;
 
-CREATE OR REPLACE VIEW core.fct_payment AS
+CREATE OR REPLACE VIEW core.fct_payment DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT order_id, payment_sequential AS payment_seq, payment_type,
  payment_installments AS installments,
  toDecimal64(amount_cents, 2) / 100 AS amount, amount_cents
 FROM raw.order_payments FINAL;
 
-CREATE OR REPLACE VIEW core.fct_order AS
+CREATE OR REPLACE VIEW core.fct_order DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT o.order_id AS order_id, c.customer_unique_id AS customer_key,
  o.customer_id AS source_customer_id, o.order_status AS status_code,
  toDate(fromUnixTimestamp64Milli(o.order_purchase_timestamp_ms, 'UTC')) AS purchase_date,
@@ -90,25 +90,25 @@ LEFT JOIN (
  FROM raw.order_payments FINAL GROUP BY order_id
 ) AS p ON o.order_id = p.order_id;
 
-CREATE OR REPLACE VIEW core.fct_order_seller AS
+CREATE OR REPLACE VIEW core.fct_order_seller DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT order_id, seller_id, min(shipping_limit_at) AS shipping_limit_at,
  count() AS items_count, sum(price) AS items_price, sum(freight) AS items_freight
 FROM core.fct_order_item GROUP BY order_id, seller_id;
 
-CREATE OR REPLACE VIEW core.fct_review AS
+CREATE OR REPLACE VIEW core.fct_review DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT review_id, any(review_score) AS score,
  any(review_comment_title) AS title, any(review_comment_message) AS message,
- toDate(fromUnixTimestamp64Milli(any(review_creation_date_ms), 'UTC')) AS created_date,
- fromUnixTimestamp64Milli(any(review_answer_timestamp_ms), 'UTC') AS answered_at
+ fromUnixTimestamp64Milli(nullIf(any(review_creation_date_ms),0), 'UTC') AS created_date,
+ fromUnixTimestamp64Milli(nullIf(any(review_answer_timestamp_ms),0), 'UTC') AS answered_at
 FROM raw.order_reviews FINAL GROUP BY review_id;
 
-CREATE OR REPLACE VIEW core.fct_review_order AS
+CREATE OR REPLACE VIEW core.fct_review_order DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT review_id, order_id,
  row_number() OVER (PARTITION BY order_id ORDER BY review_answer_timestamp_ms DESC,
  review_creation_date_ms DESC, review_id DESC) = 1 AS is_order_score
 FROM raw.order_reviews FINAL;
 
-CREATE OR REPLACE VIEW core.dim_date AS
+CREATE OR REPLACE VIEW core.dim_date DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT toDate(day_number) AS date_key, toStartOfMonth(date_key) AS month_start,
  toYear(date_key) AS year, toQuarter(date_key) AS quarter, toDayOfWeek(date_key) AS iso_dow
 FROM (
@@ -118,33 +118,42 @@ FROM (
  )) AS day_number FROM core.fct_order
 );
 
-CREATE OR REPLACE VIEW core.dim_order_status AS
+CREATE OR REPLACE VIEW core.dim_order_status DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT status_code, status_code = 'delivered' AS is_revenue,
  status_code = 'canceled' AS is_cancelled,
  status_code IN ('delivered', 'canceled', 'unavailable') AS is_final
 FROM (SELECT arrayJoin(['created','approved','invoiced','processing','shipped',
                        'delivered','canceled','unavailable']) AS status_code);
 
-CREATE OR REPLACE VIEW core.dim_payment_type AS
+CREATE OR REPLACE VIEW core.dim_payment_type DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT DISTINCT payment_type FROM raw.order_payments FINAL;
 
-CREATE OR REPLACE VIEW core.dq_issue AS
-SELECT 'payment_items_mismatch' AS check_id, order_id AS entity_key
+-- One scan per entity instead of one expensive order join per warning rule.
+CREATE OR REPLACE VIEW core.dq_issue DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
+SELECT tupleElement(issue,1) AS check_id,order_id AS entity_key
 FROM core.fct_order
-WHERE paid_amount IS NOT NULL AND abs(paid_amount - items_price - items_freight) > 0.01
+ARRAY JOIN [
+ ('payment_items_mismatch',paid_amount IS NOT NULL AND abs(paid_amount-items_price-items_freight)>0.01),
+ ('missing_payment',paid_amount IS NULL),('missing_items',items_count=0),
+ ('invalid_delivery_chronology',delivered_at<purchased_at),
+ ('approval_before_purchase',approved_at<purchased_at),
+ ('carrier_before_purchase',carrier_at<purchased_at),
+ ('carrier_before_approval',carrier_at<approved_at),
+ ('delivery_before_carrier',delivered_at<carrier_at),
+ ('delivered_missing_delivery_date',status_code='delivered' AND delivered_at IS NULL)
+] AS issue WHERE tupleElement(issue,2)=1
 UNION ALL
-SELECT 'missing_payment', order_id FROM core.fct_order WHERE paid_amount IS NULL
-UNION ALL
-SELECT 'missing_items', order_id FROM core.fct_order WHERE items_count = 0
-UNION ALL
-SELECT 'invalid_delivery_chronology', order_id FROM core.fct_order WHERE delivered_at < purchased_at;
+SELECT tupleElement(issue,1) AS check_id,product_id AS entity_key
+FROM core.dim_product ARRAY JOIN [
+ ('zero_weight',weight_g=0),('missing_category',category_key='unknown')
+] AS issue WHERE tupleElement(issue,2)=1;
 
 -- Publishing uses EXCHANGE TABLES: all dashboard panels query one validated snapshot.
 CREATE TABLE IF NOT EXISTS mart.sales_daily (
  day Date, revenue_cents Int64, freight_cents Int64, orders_count UInt64
 ) ENGINE = MergeTree ORDER BY day;
 
-CREATE OR REPLACE VIEW mart.sales_metrics AS
+CREATE OR REPLACE VIEW mart.sales_metrics DEFINER=CURRENT_USER SQL SECURITY DEFINER AS
 SELECT day, toDecimal64(revenue_cents, 2) / 100 AS revenue,
  toDecimal64(freight_cents, 2) / 100 AS freight, orders_count
 FROM mart.sales_daily;

@@ -1,4 +1,4 @@
--- Warnings preserve source values. Invalid types/keys/references abort the build.
+-- Suspicious but representable facts remain in core. Contract errors are in audit.issue.
 INSERT INTO core.dq_issue(check_id,entity,entity_key,details)
 SELECT v.check_id,'core.fct_order',o.order_id,to_jsonb(o)
 FROM core.fct_order o CROSS JOIN LATERAL (VALUES

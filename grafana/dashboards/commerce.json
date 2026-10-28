@@ -12,7 +12,7 @@
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 2,
-  "editable": false,
+  "editable": true,
   "graphTooltip": 1,
   "refresh": "1m",
   "time": {
@@ -33,7 +33,14 @@
   "annotations": {
     "list": []
   },
-  "links": [],
+  "links": [
+    {
+      "title": "Открыть аналитика ↗",
+      "url": "/agent/?from=${__from}&to=${__to}",
+      "targetBlank": true,
+      "type": "link"
+    }
+  ],
   "panels": [
     {
       "id": 1,
@@ -52,6 +59,21 @@
       }
     },
     {
+      "id": 8,
+      "title": "Спросите аналитика / SQL, результат и происхождение данных",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "options": {
+        "mode": "html",
+        "content": "<iframe title=\"Capibara — агент\" src=\"/agent/?from=${__from}&amp;to=${__to}&amp;autostart=1\" style=\"width:100%;height:100%;min-height:560px;border:0;border-radius:8px\"></iframe>"
+      }
+    },
+    {
       "id": 2,
       "title": "01 / Оборот товаров · без доставки",
       "type": "stat",
@@ -62,7 +84,7 @@
       "description": "Сумма цен товаров без доставки. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 22,
         "w": 12,
         "h": 5
       },
@@ -126,7 +148,7 @@
       "description": "Стоимость доставки тех же доставленных заказов. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 22,
         "w": 12,
         "h": 5
       },
@@ -190,7 +212,7 @@
       "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 27,
         "w": 12,
         "h": 9
       },
@@ -268,7 +290,7 @@
       "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
         "x": 12,
-        "y": 11,
+        "y": 27,
         "w": 12,
         "h": 9
       },
@@ -345,7 +367,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 36,
         "w": 24,
         "h": 9
       },
@@ -454,7 +476,7 @@
       "transparent": true,
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 45,
         "w": 24,
         "h": 5
       },

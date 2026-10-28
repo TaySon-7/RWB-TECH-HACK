@@ -12,6 +12,8 @@ fi
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
     '\ir tables.sql') cat model/tables.sql ;;
+    '\ir audit.sql') cat model/audit.sql ;;
+    '\ir audit_views.sql') cat model/audit_views.sql ;;
     '\ir load.sql') cat model/load.sql ;;
     '\ir quality.sql') cat model/quality.sql ;;
     '\ir checks.sql') cat model/checks.sql ;;

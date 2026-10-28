@@ -56,12 +56,13 @@ dashboard = {
     'id': None, 'uid': 'capibara-commerce', 'title': 'Capibara · Пульс маркетплейса',
     'description': 'Две проверяемые метрики. ClickHouse ← Kafka ← Protobuf. Только состоявшиеся продажи.',
     'tags': ['RWB TECH HACK', 'ClickHouse', 'Kafka', 'Protobuf'],
-    'timezone': 'utc', 'schemaVersion': 39, 'version': 2, 'editable': False,
+    'timezone': 'utc', 'schemaVersion': 39, 'version': 2, 'editable': True,
     'graphTooltip': 1, 'refresh': '1m',
     'time': {'from': '2016-09-01T00:00:00.000Z', 'to': '2018-08-31T23:59:59.999Z'},
     'timepicker': {'refresh_intervals': ['1m', '5m', '15m'], 'hidden': False},
     'templating': {'list': []}, 'annotations': {'list': []},
-    'links': [],
+    'links': [{'title': 'Открыть аналитика ↗', 'url': '/agent/?from=${__from}&to=${__to}',
+               'targetBlank': True, 'type': 'link'}],
     'panels': [
         {'id': 1, 'title': '', 'type': 'text', 'transparent': True,
          'gridPos': {'x': 0, 'y': 0, 'w': 24, 'h': 6},
@@ -108,6 +109,18 @@ dashboard = {
 Исходные даты без часового пояса сохранены как календарные значения; дашборд отображает UTC без сдвига дат.'''}},
     ],
 }
+
+# Add one agent window; the existing metrics, SQL and panel IDs remain intact.
+for panel in dashboard['panels']:
+    if panel['gridPos']['y'] >= 6:
+        panel['gridPos']['y'] += 16
+dashboard['panels'].insert(1, {
+    'id': 8, 'title': 'Спросите аналитика / SQL, результат и происхождение данных', 'type': 'text',
+    'gridPos': {'x': 0, 'y': 6, 'w': 24, 'h': 16},
+    'options': {'mode': 'html', 'content': '<iframe title="Capibara — агент" '
+                'src="/agent/?from=${__from}&amp;to=${__to}&amp;autostart=1" '
+                'style="width:100%;height:100%;min-height:560px;border:0;border-radius:8px"></iframe>'},
+})
 
 if __name__ == '__main__':
     (ROOT / 'grafana/dashboards/commerce.json').write_text(
