@@ -120,7 +120,7 @@ FROM (
 
 CREATE OR REPLACE VIEW core.dim_order_status AS
 SELECT status_code, status_code = 'delivered' AS is_revenue,
- status_code IN ('canceled', 'unavailable') AS is_cancelled,
+ status_code = 'canceled' AS is_cancelled,
  status_code IN ('delivered', 'canceled', 'unavailable') AS is_final
 FROM (SELECT arrayJoin(['created','approved','invoiced','processing','shipped',
                        'delivered','canceled','unavailable']) AS status_code);
