@@ -11,6 +11,7 @@ values = {
     'CLICKHOUSE_PASSWORD': secrets.token_hex(24),
     'GRAFANA_DB_PASSWORD': secrets.token_hex(24),
     'GRAFANA_ADMIN_PASSWORD': secrets.token_urlsafe(24),
+    'GRAFANA_VIEWER_PASSWORD': secrets.token_urlsafe(24),
     'GRAFANA_BIND': os.environ.get('GRAFANA_BIND', '127.0.0.1'),
     'GRAFANA_PORT': '3000',
 }

@@ -13,6 +13,7 @@ case "${1:-up}" in
     "${DC[@]}" run --rm --no-deps pipeline bootstrap
     "${DC[@]}" run --rm --no-deps pipeline ingest
     "${DC[@]}" up -d --wait grafana
+    python3 scripts/provision_grafana.py
     "${DC[@]}" ps
     ;;
   check) "${DC[@]}" run --rm --no-deps pipeline check ;;
