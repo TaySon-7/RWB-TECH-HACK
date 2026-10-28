@@ -1,0 +1,94 @@
+name: Analytics · validate and deploy
+on:
+  push:
+    branches: [main, feture/clickhouse-kafka-grafana]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: analytics-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate contracts and configuration
+        run: |
+          python pipeline/generate_schema.py --check
+          python scripts/init_analytics_env.py
+          python -m compileall -q pipeline scripts
+          bash -n scripts/analytics.sh deploy/deploy.sh
+          docker compose --env-file .env.analytics -f docker-compose.analytics.yml config --quiet
+      - name: Full Kafka → Protobuf → ClickHouse integration
+        run: bash scripts/analytics.sh up
+      - name: Business controls and Grafana query checks
+        run: python scripts/smoke_analytics.py
+      - name: Replay is idempotent
+        run: |
+          bash scripts/analytics.sh replay
+          python scripts/smoke_analytics.py
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --env-file .env.analytics -f docker-compose.analytics.yml logs --tail=100
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: analytics-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deployment configuration
+        id: deployment-config
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_USER" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '### Automatic deployment is pending' >> "$GITHUB_STEP_SUMMARY"
+            echo 'CI passed. Configure the four DEPLOY_* secrets to enable SSH deployment.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Install deploy identity
+        if: steps.deployment-config.outputs.ready == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY" || { echo 'Missing DEPLOY_SSH_KEY secret'; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload exact validated commit
+        if: steps.deployment-config.outputs.ready == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p /home/fedya/rwb-tech-hack/app'
+          rsync -az --delete --exclude='.git/' --exclude='.env*' --exclude='data/' \
+            --exclude='__pycache__/' ./ "$DEPLOY_USER@$DEPLOY_HOST:/home/fedya/rwb-tech-hack/app/"
+      - name: Deploy and verify
+        if: steps.deployment-config.outputs.ready == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_REVISION: ${{ github.sha }}
+        run: |
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /home/fedya/rwb-tech-hack/app && DEPLOY_REVISION='$DEPLOY_REVISION' bash deploy/deploy.sh && python3 scripts/smoke_analytics.py"
