@@ -19,8 +19,8 @@ def stat(number, title, column, color, x):
         'description': ('Сумма цен товаров без доставки.' if column == 'revenue' else
                         'Стоимость доставки тех же доставленных заказов.') +
                        ' Только delivered. Период по дате оформления. Валюта: BRL (R$).',
-        'gridPos': {'x': x, 'y': 5, 'w': 12, 'h': 5},
-        'fieldConfig': {'defaults': {'unit': 'currencyBRL', 'decimals': 2,
+        'gridPos': {'x': x, 'y': 6, 'w': 12, 'h': 5},
+        'fieldConfig': {'defaults': {'unit': 'currency:financial:R$', 'decimals': 2,
                                      'color': {'mode': 'fixed', 'fixedColor': color}}, 'overrides': []},
         'options': {'reduceOptions': {'calcs': ['lastNotNull'], 'fields': '', 'values': False},
                     'orientation': 'horizontal', 'textMode': 'value', 'colorMode': 'value',
@@ -34,7 +34,7 @@ def chart(number, title, column, color, x):
     return {
         'id': number, 'title': title, 'type': 'timeseries', 'datasource': SOURCE,
         'description': 'Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.',
-        'gridPos': {'x': x, 'y': 10, 'w': 12, 'h': 9},
+        'gridPos': {'x': x, 'y': 11, 'w': 12, 'h': 9},
         'fieldConfig': {'defaults': {
             'unit': 'currencyBRL', 'decimals': 0,
             'color': {'mode': 'fixed', 'fixedColor': color},
@@ -56,7 +56,7 @@ dashboard = {
     'id': None, 'uid': 'capibara-commerce', 'title': 'Capibara · Пульс маркетплейса',
     'description': 'Две проверяемые метрики. ClickHouse ← Kafka ← Protobuf. Только состоявшиеся продажи.',
     'tags': ['RWB TECH HACK', 'ClickHouse', 'Kafka', 'Protobuf'],
-    'timezone': 'utc', 'schemaVersion': 39, 'version': 1, 'editable': False,
+    'timezone': 'utc', 'schemaVersion': 39, 'version': 2, 'editable': False,
     'graphTooltip': 1, 'refresh': '1m',
     'time': {'from': '2016-09-01T00:00:00.000Z', 'to': '2018-08-31T23:59:59.999Z'},
     'timepicker': {'refresh_intervals': ['1m', '5m', '15m'], 'hidden': False},
@@ -64,7 +64,7 @@ dashboard = {
     'links': [],
     'panels': [
         {'id': 1, 'title': '', 'type': 'text', 'transparent': True,
-         'gridPos': {'x': 0, 'y': 0, 'w': 24, 'h': 5},
+         'gridPos': {'x': 0, 'y': 0, 'w': 24, 'h': 6},
          'options': {'mode': 'html', 'content': '''
 <div style="padding:12px 20px;border-left:4px solid #56C2FF;">
 <p style="color:#56C2FF;letter-spacing:3px;font-size:12px;">CAPIBARA / COMMERCE INTELLIGENCE</p>
@@ -78,15 +78,15 @@ dashboard = {
         chart(5, 'Стоимость доставки · динамика по месяцам', 'freight', GOLD, 12),
         {'id': 6, 'title': 'Проверяемая детализация / каждый месяц на месте',
          'type': 'table', 'datasource': SOURCE,
-         'gridPos': {'x': 0, 'y': 19, 'w': 24, 'h': 9},
+         'gridPos': {'x': 0, 'y': 20, 'w': 24, 'h': 9},
          'fieldConfig': {'defaults': {'decimals': 2, 'custom': {'align': 'auto', 'cellOptions': {'type': 'auto'}}},
                          'overrides': [
                              {'matcher': {'id': 'byName', 'options': 'Оборот товаров'},
-                              'properties': [{'id': 'unit', 'value': 'currencyBRL'},
+                              'properties': [{'id': 'unit', 'value': 'currency:financial:R$'},
                                              {'id': 'color', 'value': {'mode': 'fixed', 'fixedColor': BLUE}},
                                              {'id': 'custom.cellOptions', 'value': {'type': 'color-text'}}]},
                              {'matcher': {'id': 'byName', 'options': 'Стоимость доставки'},
-                              'properties': [{'id': 'unit', 'value': 'currencyBRL'},
+                              'properties': [{'id': 'unit', 'value': 'currency:financial:R$'},
                                              {'id': 'color', 'value': {'mode': 'fixed', 'fixedColor': GOLD}},
                                              {'id': 'custom.cellOptions', 'value': {'type': 'color-text'}}]},
                          ]},
@@ -98,7 +98,7 @@ dashboard = {
              toFloat64(sum(freight)) AS "Стоимость доставки"
              FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY "Месяц" ORDER BY "Месяц"''')]},
         {'id': 7, 'title': 'За цифрами / архитектура и определения', 'type': 'text',
-         'transparent': True, 'gridPos': {'x': 0, 'y': 28, 'w': 24, 'h': 5},
+         'transparent': True, 'gridPos': {'x': 0, 'y': 29, 'w': 24, 'h': 5},
          'options': {'mode': 'markdown', 'content': '''### PROTOBUF → KAFKA → CLICKHOUSE → GRAFANA
 **8 типов событий · 3 партиции на топик · пакетная публикация проверенных витрин**
 

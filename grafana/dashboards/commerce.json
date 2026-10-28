@@ -11,7 +11,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "graphTooltip": 1,
   "refresh": "1m",
@@ -44,7 +44,7 @@
         "x": 0,
         "y": 0,
         "w": 24,
-        "h": 5
+        "h": 6
       },
       "options": {
         "mode": "html",
@@ -62,13 +62,13 @@
       "description": "Сумма цен товаров без доставки. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 6,
         "w": 12,
         "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyBRL",
+          "unit": "currency:financial:R$",
           "decimals": 2,
           "color": {
             "mode": "fixed",
@@ -126,13 +126,13 @@
       "description": "Стоимость доставки тех же доставленных заказов. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 6,
         "w": 12,
         "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyBRL",
+          "unit": "currency:financial:R$",
           "decimals": 2,
           "color": {
             "mode": "fixed",
@@ -190,7 +190,7 @@
       "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 11,
         "w": 12,
         "h": 9
       },
@@ -268,7 +268,7 @@
       "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
         "x": 12,
-        "y": 10,
+        "y": 11,
         "w": 12,
         "h": 9
       },
@@ -345,7 +345,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 20,
         "w": 24,
         "h": 9
       },
@@ -368,7 +368,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "currencyBRL"
+                "value": "currency:financial:R$"
               },
               {
                 "id": "color",
@@ -393,7 +393,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "currencyBRL"
+                "value": "currency:financial:R$"
               },
               {
                 "id": "color",
@@ -454,7 +454,7 @@
       "transparent": true,
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 29,
         "w": 24,
         "h": 5
       },
