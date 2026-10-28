@@ -107,7 +107,7 @@ def bootstrap():
     if not password.isalnum():
         raise ValueError('GRAFANA_DB_PASSWORD must contain only letters and numbers')
     query(f"CREATE USER IF NOT EXISTS grafana_reader IDENTIFIED WITH sha256_password BY '{password}'")
-    query('ALTER USER grafana_reader SETTINGS readonly = 1, max_execution_time = 30 MIN 1 MAX 30 CHANGEABLE_IN_READONLY')
+    query('ALTER USER grafana_reader SETTINGS readonly = 1, max_execution_time = 30 MIN 1 MAX 300 CHANGEABLE_IN_READONLY')
     query('GRANT SELECT ON mart.* TO grafana_reader')
     print('Kafka topics, Protobuf consumers, core and read-only Grafana user ready.', flush=True)
 
