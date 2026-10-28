@@ -103,6 +103,7 @@ def bootstrap():
                 raise
     apply_sql('clickhouse/01_ingestion.sql')
     apply_sql('clickhouse/02_core.sql')
+    apply_sql('clickhouse/03_commerce.sql')
     password = os.environ['GRAFANA_DB_PASSWORD']
     if not password.isalnum():
         raise ValueError('GRAFANA_DB_PASSWORD must contain only letters and numbers')

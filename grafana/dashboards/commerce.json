@@ -1,17 +1,18 @@
 {
   "id": null,
   "uid": "capibara-commerce",
-  "title": "Capibara · Пульс маркетплейса",
-  "description": "Две проверяемые метрики. ClickHouse ← Kafka ← Protobuf. Только состоявшиеся продажи.",
+  "title": "Capibara · Продажи и покупатели",
+  "description": "Коммерческий дашборд: оборот, доставка, заказы, средний чек, покупатели и повторные покупки. Формулы и происхождение каждого показателя доступны в подсказках и паспорте метрик.",
   "tags": [
     "RWB TECH HACK",
     "ClickHouse",
     "Kafka",
-    "Protobuf"
+    "Продажи",
+    "Покупатели"
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "editable": false,
   "graphTooltip": 1,
   "refresh": "1m",
@@ -24,8 +25,7 @@
       "1m",
       "5m",
       "15m"
-    ],
-    "hidden": false
+    ]
   },
   "templating": {
     "list": []
@@ -33,7 +33,20 @@
   "annotations": {
     "list": []
   },
-  "links": [],
+  "links": [
+    {
+      "title": "Модель и архитектура · draw.io",
+      "url": "https://app.diagrams.net/?page-id=rwb-architecture-current#G15KSdc2VXaQKBaW5urVHvc2VvqZbFUYNo",
+      "type": "link",
+      "targetBlank": true
+    },
+    {
+      "title": "Ответы аналитикам и SQL",
+      "url": "https://github.com/TaySon-7/RWB-TECH-HACK/tree/main/docs/answers",
+      "type": "link",
+      "targetBlank": true
+    }
+  ],
   "panels": [
     {
       "id": 1,
@@ -48,28 +61,48 @@
       },
       "options": {
         "mode": "html",
-        "content": "\n<div style=\"padding:12px 20px;border-left:4px solid #56C2FF;\">\n<p style=\"color:#56C2FF;letter-spacing:3px;font-size:12px;\">CAPIBARA / COMMERCE INTELLIGENCE</p>\n<h1 style=\"font-size:34px;margin:4px 0 12px;\">Продажи, которые состоялись.</h1>\n<p style=\"color:#b7c4d5;font-size:15px;\">Оборот товаров и стоимость доставки — отдельно, прозрачно, до последнего сентаво.</p>\n<p style=\"color:#8895a7;font-size:12px;\">ДОСТАВЛЕННЫЕ ЗАКАЗЫ · ПЕРИОД ПО ДАТЕ ОФОРМЛЕНИЯ · БРАЗИЛЬСКИЙ РЕАЛ R$</p>\n</div>"
+        "content": "<div style=\"padding:12px 20px;border-left:4px solid #56C2FF;\"><p style=\"color:#56C2FF;letter-spacing:3px;font-size:12px;\">CAPIBARA / COMMERCE INTELLIGENCE</p><h1 style=\"font-size:32px;margin:6px 0 12px;\">Продажи и покупатели.</h1><p style=\"color:#b7c4d5;font-size:15px;\">От оборота к повторным покупкам: масштаб, состав продаж и возвращение аудитории.</p><p style=\"color:#8895a7;font-size:12px;\">DELIVERED · ДАТА ОФОРМЛЕНИЯ · BRL / R$ · ФОРМУЛЫ В ПОДСКАЗКЕ КАЖДОЙ ПАНЕЛИ</p></div>"
       }
     },
     {
       "id": 2,
-      "title": "01 / Оборот товаров · без доставки",
+      "title": "Оборот товаров",
+      "description": "Оборот товаров. Формула: Σ items_price_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.price_cents. Суммируется по непересекающимся позициям/заказам; без доставки.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
       "type": "stat",
       "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "capibara-clickhouse"
       },
-      "description": "Сумма цен товаров без доставки. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
         "x": 0,
         "y": 6,
-        "w": 12,
+        "w": 8,
         "h": 5
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toFloat64(coalesce(sum(items_price_cents),0))/100 AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "unit": "currency:financial:R$",
           "decimals": 2,
+          "noValue": "—",
           "color": {
             "mode": "fixed",
             "fixedColor": "#56C2FF"
@@ -85,55 +118,54 @@
           "fields": "",
           "values": false
         },
-        "orientation": "horizontal",
         "textMode": "value",
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
-        "wideLayout": true,
         "text": {
-          "valueSize": 48
+          "valueSize": 40
         }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "capibara-clickhouse"
-          },
-          "rawSql": "SELECT toFloat64(coalesce(sum(revenue),0)) AS value FROM mart.sales_metrics WHERE $__timeFilter(day)",
-          "queryType": "sql",
-          "editorType": "sql",
-          "format": 1,
-          "meta": {
-            "builderOptions": {
-              "mode": "sql",
-              "queryType": "table"
-            }
-          }
-        }
-      ]
+      }
     },
     {
       "id": 3,
-      "title": "02 / Стоимость доставки",
+      "title": "Стоимость доставки",
+      "description": "Стоимость доставки. Формула: Σ items_freight_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.freight_cents. Суммируется по непересекающимся позициям/заказам.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
       "type": "stat",
       "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "capibara-clickhouse"
       },
-      "description": "Стоимость доставки тех же доставленных заказов. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 6,
-        "w": 12,
+        "w": 8,
         "h": 5
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toFloat64(coalesce(sum(items_freight_cents),0))/100 AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "unit": "currency:financial:R$",
           "decimals": 2,
+          "noValue": "—",
           "color": {
             "mode": "fixed",
             "fixedColor": "#F5C56A"
@@ -149,15 +181,29 @@
           "fields": "",
           "values": false
         },
-        "orientation": "horizontal",
         "textMode": "value",
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
-        "wideLayout": true,
         "text": {
-          "valueSize": 48
+          "valueSize": 40
         }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Средний чек с доставкой",
+      "description": "Средний чек с доставкой. Формула: Σ(items_price_cents + items_freight_cents) / COUNT(*) / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order. Не суммируется; пересчитывается из суммы и числа заказов. При 0 заказов — NULL.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 6,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -166,7 +212,7 @@
             "type": "grafana-clickhouse-datasource",
             "uid": "capibara-clickhouse"
           },
-          "rawSql": "SELECT toFloat64(coalesce(sum(freight),0)) AS value FROM mart.sales_metrics WHERE $__timeFilter(day)",
+          "rawSql": "SELECT toFloat64(sum(items_price_cents+items_freight_cents))/nullIf(count(),0)/100 AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
           "queryType": "sql",
           "editorType": "sql",
           "format": 1,
@@ -177,65 +223,50 @@
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currency:financial:R$",
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#69DBB0"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {
+          "valueSize": 40
+        }
+      }
     },
     {
       "id": 4,
-      "title": "Оборот товаров · динамика по месяцам",
-      "type": "timeseries",
+      "title": "Доставленные заказы",
+      "description": "Доставленные заказы. Формула: COUNT(*). Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order.order_id, status_code. Суммируется по непересекающимся периодам; по категориям/продавцам — нет.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "stat",
       "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "capibara-clickhouse"
       },
-      "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
         "x": 0,
         "y": 11,
-        "w": 12,
-        "h": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL",
-          "decimals": 0,
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#56C2FF"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "fillOpacity": 18,
-            "gradientMode": "opacity",
-            "showPoints": "always",
-            "pointSize": 5,
-            "spanNulls": false,
-            "axisBorderShow": false,
-            "axisColorMode": "text",
-            "axisLabel": "R$ · в месяц",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "axisCenteredZero": false,
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -244,76 +275,187 @@
             "type": "grafana-clickhouse-datasource",
             "uid": "capibara-clickhouse"
           },
-          "rawSql": "SELECT toDateTime(toStartOfMonth(day), 'UTC') AS time,\n            toFloat64(sum(revenue)) AS \"Оборот товаров · динамика по месяцам\"\n            FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY time ORDER BY time",
+          "rawSql": "SELECT count() AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
           "queryType": "sql",
           "editorType": "sql",
-          "format": 0,
+          "format": 1,
           "meta": {
             "builderOptions": {
               "mode": "sql",
-              "queryType": "timeSeries"
+              "queryType": "table"
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#56C2FF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {
+          "valueSize": 40
+        }
+      }
     },
     {
-      "id": 5,
-      "title": "Стоимость доставки · динамика по месяцам",
+      "id": 6,
+      "title": "Покупатели",
+      "description": "Покупатели. Формула: uniqExact(customer_key). Уровень: Человек. Источник: mart.commerce_orders → core.fct_order → raw.customers.customer_unique_id. Не суммируется между месяцами, категориями и продавцами.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 11,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT uniqExact(customer_key) AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#BAA1FF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Доля повторных заказов",
+      "description": "Доля повторных заказов. Формула: 100 × COUNT_IF(is_returning=1) / COUNT(*). Уровень: Заказ. Источник: mart.commerce_orders: purchased_at > первая дата оформления delivered-заказа человека за всю историю. Не суммируется; знаменатель — все delivered-заказы выбранного периода. При 0 заказов — NULL.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 11,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT 100.0*countIf(is_returning=1)/nullIf(count(),0) AS value FROM mart.commerce_orders WHERE $__dateFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#69DBB0"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Оборот товаров · по месяцам",
+      "description": "Оборот товаров. Формула: Σ items_price_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.price_cents. Суммируется по непересекающимся позициям/заказам; без доставки.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
       "type": "timeseries",
       "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "capibara-clickhouse"
       },
-      "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
       "gridPos": {
-        "x": 12,
-        "y": 11,
+        "x": 0,
+        "y": 16,
         "w": 12,
         "h": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL",
-          "decimals": 0,
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#F5C56A"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "fillOpacity": 18,
-            "gradientMode": "opacity",
-            "showPoints": "always",
-            "pointSize": 5,
-            "spanNulls": false,
-            "axisBorderShow": false,
-            "axisColorMode": "text",
-            "axisLabel": "R$ · в месяц",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "axisCenteredZero": false,
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
       },
       "targets": [
         {
@@ -322,7 +464,7 @@
             "type": "grafana-clickhouse-datasource",
             "uid": "capibara-clickhouse"
           },
-          "rawSql": "SELECT toDateTime(toStartOfMonth(day), 'UTC') AS time,\n            toFloat64(sum(freight)) AS \"Стоимость доставки · динамика по месяцам\"\n            FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY time ORDER BY time",
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, toFloat64(coalesce(t.revenue,0))/100 AS \"Оборот товаров\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
           "queryType": "sql",
           "editorType": "sql",
           "format": 0,
@@ -333,11 +475,409 @@
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     },
     {
-      "id": 6,
-      "title": "Проверяемая детализация / каждый месяц на месте",
+      "id": 11,
+      "title": "Доставка · по месяцам",
+      "description": "Стоимость доставки. Формула: Σ items_freight_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.freight_cents. Суммируется по непересекающимся позициям/заказам.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, toFloat64(coalesce(t.freight,0))/100 AS \"Стоимость доставки\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Заказы · по месяцам",
+      "description": "Доставленные заказы. Формула: COUNT(*). Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order.order_id, status_code. Суммируется по непересекающимся периодам; по категориям/продавцам — нет.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, coalesce(t.orders,0) AS \"Доставленные заказы\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Средний чек · по месяцам",
+      "description": "Средний чек с доставкой. Формула: Σ(items_price_cents + items_freight_cents) / COUNT(*) / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order. Не суммируется; пересчитывается из суммы и числа заказов. При 0 заказов — NULL.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, toFloat64(t.revenue+t.freight)/nullIf(t.orders,0)/100 AS \"Средний чек\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Первые и повторные заказы",
+      "description": "Первые заказы. Формула: COUNT_IF(is_returning=0). Уровень: Заказ. Источник: mart.commerce_orders.is_returning. Считаются относительно всей истории, а не начала выбранного периода. Одновременные первые заказы относятся сюда.\n\nПовторные заказы. Формула: COUNT_IF(is_returning=1). Уровень: Заказ. Источник: mart.commerce_orders.is_returning. У человека есть delivered-заказ со строго более ранним purchased_at; суммируется по периодам.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, coalesce(t.first_orders,0) AS \"Первые заказы\", coalesce(t.returning,0) AS \"Повторные заказы\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Покупатели · по месяцам",
+      "description": "Покупатели. Формула: uniqExact(customer_key). Уровень: Человек. Источник: mart.commerce_orders → core.fct_order → raw.customers.customer_unique_id. Не суммируется между месяцами, категориями и продавцами.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.\nПолный календарь: месяцы без продаж сохраняются. Средний чек/доля при 0 заказов — NULL.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, coalesce(t.buyers,0) AS \"Покупатели\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "—",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Категории · весь оборот, включая неизвестную",
+      "description": "Оборот товаров. Формула: Σ items_price_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.price_cents. Суммируется по непересекающимся позициям/заказам; без доставки.\n\nДоля категории в обороте. Формула: 100 × Σ price_cents категории / Σ price_cents всех категорий. Уровень: Позиция. Источник: mart.commerce_items → core.fct_order_item, dim_product, dim_category. Знаменатель — все категории периода. unknown не исключается; процент пересчитывается.\n\nПроданные единицы. Формула: COUNT(*) позиций. Уровень: Единица товара. Источник: mart.commerce_items → core.fct_order_item. Одна исходная позиция — одна единица; quantity в выгрузке отсутствует.\n\nЗаказы категории / продавца. Формула: uniqExact(order_id) внутри категории / продавца. Уровень: Заказ в срезе. Источник: mart.commerce_items.order_id, category_key, seller_id. Один заказ может включать несколько категорий/продавцов; числа между срезами не складываются.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
       "type": "table",
       "datasource": {
         "type": "grafana-clickhouse-datasource",
@@ -345,13 +885,33 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
-        "w": 24,
-        "h": 9
+        "y": 43,
+        "w": 12,
+        "h": 11
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT category_name AS \"Категория\",toFloat64(sum(price_cents))/100 AS \"Оборот товаров\",\n 100.0*sum(price_cents)/nullIf(sum(sum(price_cents)) OVER (),0) AS \"Доля оборота\",\n uniqExact(order_id) AS \"Заказов\",count() AS \"Единиц\"\n FROM mart.commerce_items WHERE $__dateFilter(day) GROUP BY category_key,category_name ORDER BY \"Оборот товаров\" DESC",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
-          "decimals": 2,
+          "decimals": 0,
+          "noValue": "—",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -371,42 +931,24 @@
                 "value": "currency:financial:R$"
               },
               {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#56C2FF"
-                }
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
+                "id": "decimals",
+                "value": 2
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Стоимость доставки"
+              "options": "Доля оборота"
             },
             "properties": [
               {
                 "id": "unit",
-                "value": "currency:financial:R$"
+                "value": "percent"
               },
               {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F5C56A"
-                }
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
+                "id": "decimals",
+                "value": 2
               }
             ]
           }
@@ -416,16 +958,24 @@
         "showHeader": true,
         "cellHeight": "sm",
         "footer": {
-          "show": true,
-          "reducer": [
-            "sum"
-          ],
-          "countRows": false,
-          "fields": [
-            "Оборот товаров",
-            "Стоимость доставки"
-          ]
+          "show": false
         }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Топ-10 продавцов · только их товары",
+      "description": "Проданные единицы. Формула: COUNT(*) позиций. Уровень: Единица товара. Источник: mart.commerce_items → core.fct_order_item. Одна исходная позиция — одна единица; quantity в выгрузке отсутствует.\n\nЗаказы категории / продавца. Формула: uniqExact(order_id) внутри категории / продавца. Уровень: Заказ в срезе. Источник: mart.commerce_items.order_id, category_key, seller_id. Один заказ может включать несколько категорий/продавцов; числа между срезами не складываются.\n\nОборот продавца. Формула: Σ price_cents только позиций продавца / 100. Уровень: Позиция продавца. Источник: mart.commerce_items → core.fct_order_item.seller_id, price_cents; core.dim_seller. Чужие позиции заказа продавцу не приписываются; доставка не включена.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 43,
+        "w": 12,
+        "h": 11
       },
       "targets": [
         {
@@ -434,7 +984,7 @@
             "type": "grafana-clickhouse-datasource",
             "uid": "capibara-clickhouse"
           },
-          "rawSql": "SELECT formatDateTime(toStartOfMonth(day), '%Y-%m') AS \"Месяц\",\n             toFloat64(sum(revenue)) AS \"Оборот товаров\",\n             toFloat64(sum(freight)) AS \"Стоимость доставки\"\n             FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY \"Месяц\" ORDER BY \"Месяц\"",
+          "rawSql": "SELECT seller_id AS \"Продавец\",seller_city AS \"Город\",seller_state AS \"Штат\",\n uniqExact(order_id) AS \"Заказов\",count() AS \"Единиц\",toFloat64(sum(price_cents))/100 AS \"Оборот продавца\"\n FROM mart.commerce_items WHERE $__dateFilter(day) GROUP BY seller_id,seller_city,seller_state ORDER BY \"Оборот продавца\" DESC,seller_id LIMIT 10",
           "queryType": "sql",
           "editorType": "sql",
           "format": 1,
@@ -445,22 +995,178 @@
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Оборот продавца"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
     },
     {
-      "id": 7,
-      "title": "За цифрами / архитектура и определения",
-      "type": "text",
-      "transparent": true,
+      "id": 22,
+      "title": "Месячная детализация · средние и доли пересчитаны",
+      "description": "Оборот товаров. Формула: Σ items_price_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.price_cents. Суммируется по непересекающимся позициям/заказам; без доставки.\n\nСтоимость доставки. Формула: Σ items_freight_cents / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order → raw.order_items.freight_cents. Суммируется по непересекающимся позициям/заказам.\n\nДоставленные заказы. Формула: COUNT(*). Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order.order_id, status_code. Суммируется по непересекающимся периодам; по категориям/продавцам — нет.\n\nСредний чек с доставкой. Формула: Σ(items_price_cents + items_freight_cents) / COUNT(*) / 100. Уровень: Заказ. Источник: mart.commerce_orders → core.fct_order. Не суммируется; пересчитывается из суммы и числа заказов. При 0 заказов — NULL.\n\nПокупатели. Формула: uniqExact(customer_key). Уровень: Человек. Источник: mart.commerce_orders → core.fct_order → raw.customers.customer_unique_id. Не суммируется между месяцами, категориями и продавцами.\n\nДоля повторных заказов. Формула: 100 × COUNT_IF(is_returning=1) / COUNT(*). Уровень: Заказ. Источник: mart.commerce_orders: purchased_at > первая дата оформления delivered-заказа человека за всю историю. Не суммируется; знаменатель — все delivered-заказы выбранного периода. При 0 заказов — NULL.\nОбщее: только delivered; период по календарной дате оформления, UTC без сдвига исходного времени; BRL.",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 54,
         "w": 24,
-        "h": 5
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "WITH months AS (SELECT toStartOfMonth(day) AS month FROM mart.sales_daily WHERE $__dateFilter(day) GROUP BY month),\n totals AS (SELECT toStartOfMonth(day) AS month, sum(items_price_cents) AS revenue,\n sum(items_freight_cents) AS freight,count() AS orders,uniqExact(customer_key) AS buyers,\n countIf(is_returning=1) AS returning,countIf(is_returning=0) AS first_orders\n FROM mart.commerce_orders WHERE $__dateFilter(day) GROUP BY month)\n SELECT toDateTime(m.month,'UTC') AS time, toFloat64(coalesce(t.revenue,0))/100 AS \"Оборот товаров\",\n toFloat64(coalesce(t.freight,0))/100 AS \"Доставка\",coalesce(t.orders,0) AS \"Заказов\",\n toFloat64(t.revenue+t.freight)/nullIf(t.orders,0)/100 AS \"Средний чек\",\n coalesce(t.buyers,0) AS \"Покупателей\",100.0*t.returning/nullIf(t.orders,0) AS \"Повторные заказы, %\"\n FROM months AS m LEFT JOIN totals AS t ON m.month=t.month ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Оборот товаров"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Доставка"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Средний чек"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Повторные заказы, %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "Паспорт метрик / формулы, источники, ограничения",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 24,
+        "h": 22
       },
       "options": {
         "mode": "markdown",
-        "content": "### PROTOBUF → KAFKA → CLICKHOUSE → GRAFANA\n**8 типов событий · 3 партиции на топик · пакетная публикация проверенных витрин**\n\nОборот = Σ цен позиций доставленных заказов. Доставка = Σ стоимости доставки тех же позиций.\nОборот не включает комиссии площадки и не равен её доходу. Поздние статусы относятся к месяцу оформления.\nПовторная доставка сообщений не увеличивает суммы: канонические представления выбирают актуальную версию.\nИсходные даты без часового пояса сохранены как календарные значения; дашборд отображает UTC без сдвига дат."
+        "content": "Все показатели относятся к **delivered** и выбранным календарным датам оформления. Деньги — BRL.\n\n| Метрика | Формула | Уровень | Источник | Агрегация и ограничения |\n|---|---|---|---|---|\n| Оборот товаров | Σ items_price_cents / 100 | Заказ | mart.commerce_orders → core.fct_order → raw.order_items.price_cents | Суммируется по непересекающимся позициям/заказам; без доставки. |\n| Стоимость доставки | Σ items_freight_cents / 100 | Заказ | mart.commerce_orders → core.fct_order → raw.order_items.freight_cents | Суммируется по непересекающимся позициям/заказам. |\n| Доставленные заказы | COUNT(*) | Заказ | mart.commerce_orders → core.fct_order.order_id, status_code | Суммируется по непересекающимся периодам; по категориям/продавцам — нет. |\n| Средний чек с доставкой | Σ(items_price_cents + items_freight_cents) / COUNT(*) / 100 | Заказ | mart.commerce_orders → core.fct_order | Не суммируется; пересчитывается из суммы и числа заказов. При 0 заказов — NULL. |\n| Покупатели | uniqExact(customer_key) | Человек | mart.commerce_orders → core.fct_order → raw.customers.customer_unique_id | Не суммируется между месяцами, категориями и продавцами. |\n| Доля повторных заказов | 100 × COUNT_IF(is_returning=1) / COUNT(*) | Заказ | mart.commerce_orders: purchased_at > первая дата оформления delivered-заказа человека за всю историю | Не суммируется; знаменатель — все delivered-заказы выбранного периода. При 0 заказов — NULL. |\n| Первые заказы | COUNT_IF(is_returning=0) | Заказ | mart.commerce_orders.is_returning | Считаются относительно всей истории, а не начала выбранного периода. Одновременные первые заказы относятся сюда. |\n| Повторные заказы | COUNT_IF(is_returning=1) | Заказ | mart.commerce_orders.is_returning | У человека есть delivered-заказ со строго более ранним purchased_at; суммируется по периодам. |\n| Доля категории в обороте | 100 × Σ price_cents категории / Σ price_cents всех категорий | Позиция | mart.commerce_items → core.fct_order_item, dim_product, dim_category | Знаменатель — все категории периода. unknown не исключается; процент пересчитывается. |\n| Проданные единицы | COUNT(*) позиций | Единица товара | mart.commerce_items → core.fct_order_item | Одна исходная позиция — одна единица; quantity в выгрузке отсутствует. |\n| Заказы категории / продавца | uniqExact(order_id) внутри категории / продавца | Заказ в срезе | mart.commerce_items.order_id, category_key, seller_id | Один заказ может включать несколько категорий/продавцов; числа между срезами не складываются. |\n| Оборот продавца | Σ price_cents только позиций продавца / 100 | Позиция продавца | mart.commerce_items → core.fct_order_item.seller_id, price_cents; core.dim_seller | Чужие позиции заказа продавцу не приписываются; доставка не включена. |\n\nПовторные заказы определяются по всей истории доставленных покупок. Это отличается от вопроса 4 в docs/answers: там покупатели всех статусов с ≥2 заказами. Средний чек, проценты и уникальных покупателей не складывают. Нулевая выручка показывается как 0; средний чек и доля при пустой выборке — как «—». Источники — семантические View над core; опубликованный календарь берётся из mart.sales_daily."
       }
     }
   ]
