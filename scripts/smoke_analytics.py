@@ -40,7 +40,7 @@ months = sql('''SELECT count(),countIf(revenue=0) FROM (
 assert months == '24\t1', months
 assert sql('SELECT count() FROM core.dim_customer') == '96096'
 assert sql('SELECT countIf(orders_count >= 2) FROM core.dim_customer') == '2997'
-assert sql("SELECT round(sum(items_price + items_freight)/count(),2) FROM core.fct_order WHERE status_code='delivered'") == '159.88'
+assert sql("SELECT round(sum(items_price_cents + items_freight_cents)/count()/100,2) FROM core.fct_order WHERE status_code='delivered'") == '159.88'
 assert sql('''SELECT sum(i.price_cents) AS revenue FROM core.fct_order_item AS i
     INNER JOIN core.fct_order AS o ON i.order_id=o.order_id
     WHERE o.status_code='delivered' GROUP BY i.seller_id ORDER BY revenue DESC LIMIT 1''') == '22698793'
