@@ -1,14 +1,48 @@
-# Данные скачиваются скриптом, в репозиторий не кладём: 61 МБ.
-#   bash scripts/download_data.sh
-data/*.csv
+# Исходные CSV скачиваются через bash scripts/download_data.sh.
+# Не игнорируем *.csv глобально: отчёты проверок в docs/ входят в проект.
+/data/
 
-# Мусор macOS
-.DS_Store
+# Локальные секреты и переменные окружения. Шаблоны можно коммитить.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 
-# Кэш Python
+# Виртуальные окружения Python и кэш интерпретатора / инструментов.
+.venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# Локальные настройки редакторов
+# Персональные настройки IDE и SQL-клиента.
 .idea/
 .vscode/
+.dbeaver/
+.dbeaver-data-sources*.xml
+
+# Локальные логи, временные файлы и резервные копии редакторов.
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+/tmp/
+/backups/
+
+# Дампы БД не храним в Git. SQL модели в model/ остаётся отслеживаемым.
+*.dump
+*.backup
+
+# Служебные файлы macOS и Windows.
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,137 @@
+section,check_name,affected_rows
+chronology,order_reviews: review_answer_timestamp < review_creation_date,0
+chronology,orders: order_approved_at < order_purchase_timestamp,0
+chronology,orders: order_delivered_carrier_date < order_approved_at,1359
+chronology,orders: order_delivered_carrier_date < order_purchase_timestamp,166
+chronology,orders: order_delivered_customer_date < order_delivered_carrier_date,23
+chronology,orders: order_delivered_customer_date < order_purchase_timestamp,0
+chronology,orders: order_estimated_delivery_date < order_purchase_timestamp,0
+consistency,delivered without approval date,14
+consistency,delivered without carrier date,2
+consistency,delivered without customer delivery date,8
+consistency,order/seller with different shipping limits,0
+consistency,review_id with different attributes,0
+coverage,orders without items,775
+coverage,orders without payments,1
+coverage,orders without reviews,768
+domain,invalid state format (customers),0
+domain,invalid state format (sellers),0
+domain,invalid zip prefix (customers),0
+domain,invalid zip prefix (sellers),0
+domain,order_items.freight_value < 0,0
+domain,order_items.order_item_id <= 0,0
+domain,order_items.price < 0,0
+domain,order_payments.payment_installments <= 0,2
+domain,order_payments.payment_sequential <= 0,0
+domain,order_payments.payment_value < 0,0
+domain,order_payments.payment_value = 0,9
+domain,order_reviews.review_score NOT BETWEEN 1 AND 5,0
+domain,products.product_description_lenght < 0,0
+domain,products.product_height_cm <= 0,0
+domain,products.product_length_cm <= 0,0
+domain,products.product_name_lenght < 0,0
+domain,products.product_photos_qty < 0,0
+domain,products.product_weight_g <= 0,4
+domain,products.product_width_cm <= 0,0
+domain,unknown order status,0
+domain,unknown payment type,0
+duplicate_key,customers (customer_id),0
+duplicate_key,"order_items (order_id,order_item_id)",0
+duplicate_key,"order_payments (order_id,payment_sequential)",0
+duplicate_key,"order_reviews (review_id,order_id)",0
+duplicate_key,orders (order_id),0
+duplicate_key,product_category_translation (product_category_name),0
+duplicate_key,products (product_id),0
+duplicate_key,sellers (seller_id),0
+duplicate_row,customers,0
+duplicate_row,order_items,0
+duplicate_row,order_payments,0
+duplicate_row,order_reviews,0
+duplicate_row,orders,0
+duplicate_row,product_category_translation,0
+duplicate_row,products,0
+duplicate_row,sellers,0
+invalid_type,"order_items.freight_value -> numeric(12,2)",0
+invalid_type,order_items.order_item_id -> integer,0
+invalid_type,"order_items.price -> numeric(12,2)",0
+invalid_type,order_items.shipping_limit_date -> timestamp,0
+invalid_type,order_payments.payment_installments -> integer,0
+invalid_type,order_payments.payment_sequential -> integer,0
+invalid_type,"order_payments.payment_value -> numeric(12,2)",0
+invalid_type,order_reviews.review_answer_timestamp -> timestamp,0
+invalid_type,order_reviews.review_creation_date -> timestamp,0
+invalid_type,order_reviews.review_score -> integer,0
+invalid_type,orders.order_approved_at -> timestamp,0
+invalid_type,orders.order_delivered_carrier_date -> timestamp,0
+invalid_type,orders.order_delivered_customer_date -> timestamp,0
+invalid_type,orders.order_estimated_delivery_date -> timestamp,0
+invalid_type,orders.order_purchase_timestamp -> timestamp,0
+invalid_type,products.product_description_lenght -> integer,0
+invalid_type,products.product_height_cm -> integer,0
+invalid_type,products.product_length_cm -> integer,0
+invalid_type,products.product_name_lenght -> integer,0
+invalid_type,products.product_photos_qty -> integer,0
+invalid_type,products.product_weight_g -> integer,0
+invalid_type,products.product_width_cm -> integer,0
+missing,customers.customer_city,0
+missing,customers.customer_id,0
+missing,customers.customer_state,0
+missing,customers.customer_unique_id,0
+missing,customers.customer_zip_code_prefix,0
+missing,order_items.freight_value,0
+missing,order_items.order_id,0
+missing,order_items.order_item_id,0
+missing,order_items.price,0
+missing,order_items.product_id,0
+missing,order_items.seller_id,0
+missing,order_items.shipping_limit_date,0
+missing,order_payments.order_id,0
+missing,order_payments.payment_installments,0
+missing,order_payments.payment_sequential,0
+missing,order_payments.payment_type,0
+missing,order_payments.payment_value,0
+missing,order_reviews.order_id,0
+missing,order_reviews.review_answer_timestamp,0
+missing,order_reviews.review_comment_message,58256
+missing,order_reviews.review_comment_title,87658
+missing,order_reviews.review_creation_date,0
+missing,order_reviews.review_id,0
+missing,order_reviews.review_score,0
+missing,orders.customer_id,0
+missing,orders.order_approved_at,160
+missing,orders.order_delivered_carrier_date,1783
+missing,orders.order_delivered_customer_date,2965
+missing,orders.order_estimated_delivery_date,0
+missing,orders.order_id,0
+missing,orders.order_purchase_timestamp,0
+missing,orders.order_status,0
+missing,product_category_translation.product_category_name,0
+missing,product_category_translation.product_category_name_english,0
+missing,products.product_category_name,610
+missing,products.product_description_lenght,610
+missing,products.product_height_cm,2
+missing,products.product_id,0
+missing,products.product_length_cm,2
+missing,products.product_name_lenght,610
+missing,products.product_photos_qty,610
+missing,products.product_weight_g,2
+missing,products.product_width_cm,2
+missing,sellers.seller_city,0
+missing,sellers.seller_id,0
+missing,sellers.seller_state,0
+missing,sellers.seller_zip_code_prefix,0
+missing_reference,order_items.order_id -> orders,0
+missing_reference,order_items.product_id -> products,0
+missing_reference,order_items.seller_id -> sellers,0
+missing_reference,order_payments.order_id -> orders,0
+missing_reference,order_reviews.order_id -> orders,0
+missing_reference,orders.customer_id -> customers,0
+missing_reference,products.product_category_name -> product_category_translation,13
+rows,customers,99441
+rows,order_items,112650
+rows,order_payments,103886
+rows,order_reviews,99224
+rows,orders,99441
+rows,product_category_translation,71
+rows,products,32951
+rows,sellers,3095
