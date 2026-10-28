@@ -4,6 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 ROOT = Path(__file__).resolve().parent.parent
 settings = dict(line.split('=', 1) for line in (ROOT / '.env.analytics').read_text().splitlines()
@@ -23,8 +24,11 @@ def grafana(endpoint, body=None):
     request = Request('http://127.0.0.1:' + settings.get('GRAFANA_PORT', '3000') + endpoint,
                       data=json.dumps(body).encode() if body is not None else None,
                       headers={'Authorization': 'Basic ' + credential, 'Content-Type': 'application/json'})
-    with urlopen(request, timeout=60) as response:
-        return json.load(response)
+    try:
+        with urlopen(request, timeout=60) as response:
+            return json.load(response)
+    except HTTPError as error:
+        raise RuntimeError(f'Grafana {endpoint}: {error.read().decode()}') from None
 
 
 controls = sql('''SELECT sum(revenue_cents),sum(freight_cents),sum(orders_count)
