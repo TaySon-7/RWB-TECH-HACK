@@ -64,8 +64,14 @@ for panel in dashboard['panels']:
         values = result['frames'][0]['data']['values']
         assert values and values[0], (panel['title'], values)
         if panel['type'] == 'stat':
-            expected = 13221498.11 if panel['id'] == 2 else 2202965.54
-            assert abs(float(values[0][0])-expected) < 0.005, values
-        else:
+            controls = {2:13221498.11,3:2202965.54,4:96478,5:159.88}
+            if panel['id'] in controls:
+                assert abs(float(values[0][0])-controls[panel['id']]) < 0.005, values
+            else:
+                assert float(values[0][0]) >= 0, values
+        elif panel['type'] == 'timeseries':
             assert len(values[0]) == 24, (panel['title'], len(values[0]))
+        elif panel['type'] == 'table':
+            expected_rows = {20:74,21:10,22:24}
+            assert len(values[0]) == expected_rows[panel['id']], (panel['title'], len(values[0]))
 print('PASS: entity controls, BRL totals, 24 months including zero month, read-only datasource, every Grafana panel.')
