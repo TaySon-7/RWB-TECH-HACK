@@ -46,3 +46,6 @@ htmlcov/
 ._*
 Thumbs.db
 Desktop.ini
+
+# SQL-агент: результаты запусков остаются локально.
+/sql_agent/artifacts/

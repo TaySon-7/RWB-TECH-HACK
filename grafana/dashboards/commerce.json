@@ -1,0 +1,467 @@
+{
+  "id": null,
+  "uid": "capibara-commerce",
+  "title": "Capibara · Пульс маркетплейса",
+  "description": "Две проверяемые метрики. ClickHouse ← Kafka ← Protobuf. Только состоявшиеся продажи.",
+  "tags": [
+    "RWB TECH HACK",
+    "ClickHouse",
+    "Kafka",
+    "Protobuf"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 2,
+  "editable": false,
+  "graphTooltip": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "2016-09-01T00:00:00.000Z",
+    "to": "2018-08-31T23:59:59.999Z"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m"
+    ],
+    "hidden": false
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "",
+      "type": "text",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "html",
+        "content": "\n<div style=\"padding:12px 20px;border-left:4px solid #56C2FF;\">\n<p style=\"color:#56C2FF;letter-spacing:3px;font-size:12px;\">CAPIBARA / COMMERCE INTELLIGENCE</p>\n<h1 style=\"font-size:34px;margin:4px 0 12px;\">Продажи, которые состоялись.</h1>\n<p style=\"color:#b7c4d5;font-size:15px;\">Оборот товаров и стоимость доставки — отдельно, прозрачно, до последнего сентаво.</p>\n<p style=\"color:#8895a7;font-size:12px;\">ДОСТАВЛЕННЫЕ ЗАКАЗЫ · ПЕРИОД ПО ДАТЕ ОФОРМЛЕНИЯ · БРАЗИЛЬСКИЙ РЕАЛ R$</p>\n</div>"
+      }
+    },
+    {
+      "id": 2,
+      "title": "01 / Оборот товаров · без доставки",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "description": "Сумма цен товаров без доставки. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currency:financial:R$",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#56C2FF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 48
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toFloat64(coalesce(sum(revenue),0)) AS value FROM mart.sales_metrics WHERE $__timeFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "02 / Стоимость доставки",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "description": "Стоимость доставки тех же доставленных заказов. Только delivered. Период по дате оформления. Валюта: BRL (R$).",
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currency:financial:R$",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F5C56A"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 48
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toFloat64(coalesce(sum(freight),0)) AS value FROM mart.sales_metrics WHERE $__timeFilter(day)",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Оборот товаров · динамика по месяцам",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#56C2FF"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 5,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisColorMode": "text",
+            "axisLabel": "R$ · в месяц",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toDateTime(toStartOfMonth(day), 'UTC') AS time,\n            toFloat64(sum(revenue)) AS \"Оборот товаров · динамика по месяцам\"\n            FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY time ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Стоимость доставки · динамика по месяцам",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "description": "Полный календарь сохраняет месяцы без продаж. Ноябрь 2016 года — ноль, а не пропуск.",
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F5C56A"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 5,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisColorMode": "text",
+            "axisLabel": "R$ · в месяц",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT toDateTime(toStartOfMonth(day), 'UTC') AS time,\n            toFloat64(sum(freight)) AS \"Стоимость доставки · динамика по месяцам\"\n            FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY time ORDER BY time",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "timeSeries"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Проверяемая детализация / каждый месяц на месте",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "capibara-clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Оборот товаров"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56C2FF"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Стоимость доставки"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currency:financial:R$"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F5C56A"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": [
+            "Оборот товаров",
+            "Стоимость доставки"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "capibara-clickhouse"
+          },
+          "rawSql": "SELECT formatDateTime(toStartOfMonth(day), '%Y-%m') AS \"Месяц\",\n             toFloat64(sum(revenue)) AS \"Оборот товаров\",\n             toFloat64(sum(freight)) AS \"Стоимость доставки\"\n             FROM mart.sales_metrics WHERE $__timeFilter(day) GROUP BY \"Месяц\" ORDER BY \"Месяц\"",
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "mode": "sql",
+              "queryType": "table"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "За цифрами / архитектура и определения",
+      "type": "text",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### PROTOBUF → KAFKA → CLICKHOUSE → GRAFANA\n**8 типов событий · 3 партиции на топик · пакетная публикация проверенных витрин**\n\nОборот = Σ цен позиций доставленных заказов. Доставка = Σ стоимости доставки тех же позиций.\nОборот не включает комиссии площадки и не равен её доходу. Поздние статусы относятся к месяцу оформления.\nПовторная доставка сообщений не увеличивает суммы: канонические представления выбирают актуальную версию.\nИсходные даты без часового пояса сохранены как календарные значения; дашборд отображает UTC без сдвига дат."
+      }
+    }
+  ]
+}

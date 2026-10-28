@@ -1,0 +1,7 @@
+langgraph==1.2.18
+langchain-openai==1.7.3
+psycopg2-binary==2.9.13
+sqlglot==30.25.0
+python-dotenv==1.2.4
+pydantic==2.14.1
+pytest==9.2.0

@@ -70,6 +70,9 @@ SQL-код, описание таблиц и правила обработки �
 Ответы на пять вопросов блока А, формулы, SQL-запросы и результаты —
 в [docs/answers/README.md](docs/answers/README.md).
 
+Агент на LangGraph для вопросов к `core`, исправления SQL при ошибках
+и сохранения ответов в Markdown — в [sql_agent/README.md](sql_agent/README.md).
+
 ## Схемы в базе
 
 - `raw` — исходные данные как есть, все колонки `text`. Менять не нужно.
@@ -111,3 +114,14 @@ http://localhost:8080).
 
 **Загрузка падает на `ModuleNotFoundError: psycopg2`.** Поставьте вручную:
 `pip install psycopg2-binary`
+
+## Аналитический стенд: ClickHouse, Kafka, Protobuf, Grafana
+
+```bash
+bash scripts/analytics.sh up
+python3 scripts/smoke_analytics.py
+```
+
+Grafana: http://localhost:3000/d/capibara-commerce. Пароль администратора
+создаётся в `.env.analytics`. Архитектура, CI/CD, проверки и сценарий
+демонстрации — [docs/analytics-architecture.md](docs/analytics-architecture.md).
