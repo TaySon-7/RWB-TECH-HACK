@@ -1,0 +1,18 @@
+apiVersion: 1
+datasources:
+  - name: Capibara · ClickHouse
+    uid: capibara-clickhouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    isDefault: true
+    editable: false
+    jsonData:
+      host: clickhouse
+      port: 8123
+      protocol: http
+      username: grafana_reader
+      defaultDatabase: mart
+      dialTimeout: "10"
+      queryTimeout: "30"
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD

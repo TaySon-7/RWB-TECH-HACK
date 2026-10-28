@@ -114,3 +114,14 @@ http://localhost:8080).
 
 **Загрузка падает на `ModuleNotFoundError: psycopg2`.** Поставьте вручную:
 `pip install psycopg2-binary`
+
+## Аналитический стенд: ClickHouse, Kafka, Protobuf, Grafana
+
+```bash
+bash scripts/analytics.sh up
+python3 scripts/smoke_analytics.py
+```
+
+Grafana: http://localhost:3000/d/capibara-commerce. Пароль администратора
+создаётся в `.env.analytics`. Архитектура, CI/CD, проверки и сценарий
+демонстрации — [docs/analytics-architecture.md](docs/analytics-architecture.md).

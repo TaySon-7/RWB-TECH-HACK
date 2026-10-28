@@ -1,0 +1,11 @@
+<clickhouse>
+  <format_schema_path>/etc/clickhouse-server/format_schemas/</format_schema_path>
+  <listen_host>0.0.0.0</listen_host>
+  <max_server_memory_usage>2500000000</max_server_memory_usage>
+  <background_message_broker_schedule_pool_size>16</background_message_broker_schedule_pool_size>
+  <kafka><auto_offset_reset>earliest</auto_offset_reset></kafka>
+  <logger><level>warning</level><size>20M</size><count>3</count></logger>
+  <query_log><ttl>event_date + INTERVAL 7 DAY DELETE</ttl></query_log>
+  <metric_log><ttl>event_date + INTERVAL 3 DAY DELETE</ttl></metric_log>
+  <asynchronous_metric_log><ttl>event_date + INTERVAL 3 DAY DELETE</ttl></asynchronous_metric_log>
+</clickhouse>
