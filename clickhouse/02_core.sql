@@ -62,7 +62,7 @@ SELECT order_id, payment_sequential AS payment_seq, payment_type,
 FROM raw.order_payments FINAL;
 
 CREATE OR REPLACE VIEW core.fct_order AS
-SELECT o.order_id, c.customer_unique_id AS customer_key,
+SELECT o.order_id AS order_id, c.customer_unique_id AS customer_key,
  o.customer_id AS source_customer_id, o.order_status AS status_code,
  toDate(fromUnixTimestamp64Milli(o.order_purchase_timestamp_ms, 'UTC')) AS purchase_date,
  fromUnixTimestamp64Milli(o.order_purchase_timestamp_ms, 'UTC') AS purchased_at,
@@ -73,7 +73,8 @@ SELECT o.order_id, c.customer_unique_id AS customer_key,
  leftPad(c.customer_zip_code_prefix, 5, '0') AS ship_zip,
  lowerUTF8(trimBoth(replaceRegexpAll(c.customer_city, '\\s+', ' '))) AS ship_city,
  c.customer_state AS ship_state,
- i.items_count, i.sellers_count, i.items_price_cents, i.items_freight_cents,
+ i.items_count AS items_count, i.sellers_count AS sellers_count,
+ i.items_price_cents AS items_price_cents, i.items_freight_cents AS items_freight_cents,
  toDecimal64(i.items_price_cents, 2) / 100 AS items_price,
  toDecimal64(i.items_freight_cents, 2) / 100 AS items_freight,
  if(p.payment_count = 0, NULL, toDecimal64(p.paid_cents, 2) / 100) AS paid_amount
